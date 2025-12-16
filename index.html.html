@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Game Thẻ Nhiệt Động Học</title>
+<style>
+body{font-family:Arial;background:#f2f2f2;padding:20px}
+.container{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:10px}
+button{padding:10px 15px;font-size:16px;border:none;border-radius:6px;background:#007bff;color:#fff;cursor:pointer;margin:5px}
+button:hover{background:#0056b3}
+canvas{border:1px solid #ccc;margin-top:15px}
+.quiz{margin-top:15px;padding:10px;background:#eef;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🎴 Game Thẻ Nhiệt Động Học</h1>
+<div id="state"></div>
+<button onclick="drawCard()">Rút thẻ</button>
+<canvas id="pv" width="600" height="400"></canvas>
+<p><b>Đồ thị:</b> <span id="graphType">P – V</span></p>
+<div class="quiz" id="quiz"></div>
+<div class="quiz" id="score"></div>
+</div>
+
+<script>
+// ===== TRẠNG THÁI KHÍ =====
+let state={P:1,V:1,T:300};
+let oldState=null;
+let score=0;
+let timer=null;
+
+const cards=[
+{name:"Đẳng tích",type:"V"},
+{name:"Đẳng áp",type:"P"},
+{name:"Đẳng nhiệt",type:"T"}
+];
+
+const stateDiv=document.getElementById("state");
+const quizDiv=document.getElementById("quiz");
+const scoreDiv=document.getElementById("score");
+const ctx=document.getElementById("pv").getContext("2d");
+const graphTypeSpan=document.getElementById("graphType");("2d");
+
+function updateState(){
+stateDiv.innerHTML=`P=${state.P.toFixed(2)}, V=${state.V.toFixed(2)}, T=${state.T.toFixed(0)}K`;
+}
+updateState();
+
+// ===== ÁP DỤNG THẺ =====
+function apply(card){
+if(card.type==="V"){state.T+=30;state.P=state.T/300;}
+if(card.type==="P"){state.T+=30;state.V=state.T/300;}
+if(card.type==="T"){state.V+=0.3;state.P=1/state.V;}
+}
+
+// ===== VẼ ĐỒ THỊ =====
+function draw(type){
+ctx.clearRect(0,0,600,400);
+
+// Trục tọa độ
+ctx.beginPath();
+ctx.moveTo(50,350);ctx.lineTo(550,350); // trục hoành
+ctx.moveTo(50,350);ctx.lineTo(50,50);   // trục tung
+ctx.stroke();
+
+ctx.fillText("V",560,360);
+ctx.fillText("P",40,40);
+
+// Đồ thị
+ctx.beginPath();
+if(type==="V"){
+ graphTypeSpan.innerText="P – V (Đẳng tích)";
+ let x=50+oldState.V*200;
+ ctx.moveTo(x,350-oldState.P*200);
+ ctx.lineTo(x,350-state.P*200);
+}
+if(type==="P"){
+ graphTypeSpan.innerText="P – V (Đẳng áp)";
+ let y=350-oldState.P*200;
+ ctx.moveTo(50+oldState.V*200,y);
+ ctx.lineTo(50+state.V*200,y);
+}
+if(type==="T"){
+ graphTypeSpan.innerText="P – V (Đẳng nhiệt)";
+ for(let v=oldState.V;v<=state.V;v+=0.01){
+  let p=1/v;
+  let x=50+v*200;
+  let y=350-p*200;
+  if(v===oldState.V)ctx.moveTo(x,y);
+  else ctx.lineTo(x,y);
+ }
+}
+ctx.stroke();
+ctx.beginPath();
+if(type==="V"){let x=50+oldState.V*200;ctx.moveTo(x,350-oldState.P*200);ctx.lineTo(x,350-state.P*200);}
+if(type==="P"){let y=350-oldState.P*200;ctx.moveTo(50+oldState.V*200,y);ctx.lineTo(50+state.V*200,y);}
+if(type==="T"){for(let v=oldState.V;v<=state.V;v+=0.01){let p=1/v;let x=50+v*200;let y=350-p*200;if(v===oldState.V)ctx.moveTo(x,y);else ctx.lineTo(x,y);}}
+ctx.stroke();
+}
+
+// ===== CÂU HỎI =====
+function quiz(card){
+clearInterval(timer);
+let q="",opts=[],ans="";
+if(card.type==="V"){q="Quá trình nào giữ V không đổi?";opts=["Đẳng tích","Đẳng áp","Đẳng nhiệt"];ans="Đẳng tích";}
+if(card.type==="P"){q="Quá trình nào giữ P không đổi?";opts=["Đẳng tích","Đẳng áp","Đẳng nhiệt"];ans="Đẳng áp";}
+if(card.type==="T"){q="Quá trình nào giữ T không đổi?";opts=["Đẳng tích","Đẳng áp","Đẳng nhiệt"];ans="Đẳng nhiệt";}
+quizDiv.innerHTML=`<b>${q}</b><br>`;
+opts.forEach(o=>quizDiv.innerHTML+=`<button onclick="check('${o}','${ans}')">${o}</button><br>`);
+let t=10;quizDiv.innerHTML+=`<p id='time'>⏱️ ${t}s</p>`;
+timer=setInterval(()=>{t--;document.getElementById('time').innerText=`⏱️ ${t}s`;if(t<=0){clearInterval(timer);quizDiv.innerHTML+=`<br>Hết giờ! Đáp án: ${ans}`;}},1000);
+}
+
+function check(c,a){
+clearInterval(timer);
+if(c===a){score++;quizDiv.innerHTML+=`<br>✅ Đúng`;}
+else quizDiv.innerHTML+=`<br>❌ Sai – ${a}`;
+scoreDiv.innerHTML=`⭐ Điểm: ${score}`;
+}
+
+// ===== RÚT THẺ =====
+function drawCard(){
+const card=cards[Math.floor(Math.random()*cards.length)];
+alert("Bạn rút thẻ: "+card.name);
+oldState={...state};
+apply(card);
+updateState();
+draw(card.type);
+quiz(card);
+}
+</script>
+</body>
+</html>
